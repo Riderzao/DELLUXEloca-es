@@ -1,0 +1,2636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DELLUXE Locações — Decoração de Eventos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+  DELLUXE Locações — index.html
+  Arquivo único: HTML + CSS + JS (sem dependências externas além de Google Fonts)
+  
+  🗂️ ESTRUTURA:
+     1. <style>          → Todo o CSS (público + admin)
+     2. <body> público   → Navbar, Hero, Catálogo, Galeria, Contato, Footer
+     3. <body> admin     → Overlay de login + Painel admin
+     4. <script>         → Todo o JS (Store, Site público, Admin)
+  
+  🔐 LOGIN PADRÃO: usuário "admin" / senha "delluxe2024"
+  
+  💾 DADOS: Salvos no localStorage do navegador
+     - delluxe_products   → produtos/itens de decoração
+     - delluxe_events     → fotos de eventos realizados
+     - delluxe_settings   → configurações gerais
+  
+  ⚠️ ERROS COMUNS — leia antes de mexer:
+     • Modal não abre     → verifique z-index no CSS (admin modal = 2100)
+     • Foto não aparece   → verifique se é base64 válido (começa com data:image)
+     • Admin não salva    → localStorage pode estar cheio (imagens grandes)
+     • Categoria sumiu    → verifique array CATEGORIES no Store
+============================================================ -->
+
+<style>
+/* ════════════════════════════════════════════════════════
+   VARIÁVEIS — Identidade DELLUXE
+   🎨 Paleta baseada na logo: preto + bege + branco
+   ════════════════════════════════════════════════════════ */
+:root {
+  --ink:       #0a0a0a;
+  --ink2:      #1a1a1a;
+  --cream:     #c8b99a;
+  --cream-lt:  #e8ddd0;
+  --cream-bg:  #f5f0e8;
+  --white:     #ffffff;
+  --offwhite:  #fafaf8;
+  --gray:      #888580;
+  --gray-lt:   #d0ccc5;
+  --accent:    #c8b99a; /* dourado/bege = cor de destaque */
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-serif:   'Playfair Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+
+  /* Z-INDEX MAP — não altere sem atualizar os comentários! */
+  --z-whatsapp: 800;
+  --z-nav:      900;
+  --z-mobile:   950;
+  --z-modal-pub:  1050;
+  --z-admin-over: 2000;
+  --z-admin-modal:2100;  /* ← DEVE ser maior que admin-over */
+  --z-toast:      2200;
+
+  --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --radius: 0px; /* Design: sem border-radius — visual editorial reto */
+}
+
+/* ── RESET ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--offwhite);
+  color: var(--ink);
+  overflow-x: hidden;
+  line-height: 1.65;
+}
+img { display: block; max-width: 100%; }
+button, input, select, textarea { font-family: var(--font-body); }
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--cream-bg); }
+::-webkit-scrollbar-thumb { background: var(--cream); }
+
+
+/* ════════════════════════════════════════════════════════
+   NAVBAR
+   z-index: var(--z-nav) = 900
+   ════════════════════════════════════════════════════════ */
+#navbar {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: var(--z-nav);
+  padding: 0 5%;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 72px;
+  transition: all var(--transition);
+}
+#navbar.scrolled {
+  background: rgba(10,10,10,0.97);
+  backdrop-filter: blur(16px);
+  height: 60px;
+}
+.nav-logo-wrap {
+  display: flex; flex-direction: column; line-height: 1;
+}
+.nav-logo-main {
+  font-family: var(--font-display);
+  font-size: 1.9rem; letter-spacing: 0.05em;
+  color: var(--white);
+}
+.nav-logo-main span {
+  display: inline-block;
+  background: var(--cream);
+  color: var(--ink);
+  padding: 0 6px;
+  margin-right: 2px;
+}
+.nav-logo-sub {
+  font-size: 0.6rem; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--cream);
+  margin-top: 1px;
+}
+.nav-links {
+  display: flex; gap: 2.4rem;
+}
+.nav-links a {
+  font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  transition: color var(--transition); position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1px; background: var(--cream);
+  transition: width var(--transition);
+}
+.nav-links a:hover { color: var(--white); }
+.nav-links a:hover::after { width: 100%; }
+.nav-cta {
+  font-size: 0.7rem; font-weight: 500; letter-spacing: 0.18em;
+  text-transform: uppercase; padding: 9px 20px;
+  background: var(--cream); color: var(--ink);
+  border: none; cursor: pointer; transition: all var(--transition);
+}
+.nav-cta:hover { background: var(--white); }
+.hamburger {
+  display: none; flex-direction: column; gap: 5px;
+  cursor: pointer; background: none; border: none;
+  z-index: calc(var(--z-mobile) + 10);
+}
+.hamburger span {
+  display: block; width: 26px; height: 1.5px;
+  background: var(--white); transition: all var(--transition);
+}
+.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(5px,5px); }
+.hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px,-5px); }
+
+
+/* ════════════════════════════════════════════════════════
+   MENU MOBILE
+   z-index: var(--z-mobile) = 950
+   ════════════════════════════════════════════════════════ */
+#mobileMenu {
+  display: none; position: fixed; inset: 0;
+  background: var(--ink); z-index: var(--z-mobile);
+  flex-direction: column; align-items: flex-start;
+  justify-content: center; padding: 5%;
+}
+#mobileMenu.open { display: flex; }
+.mob-logo {
+  font-family: var(--font-display); font-size: 3.5rem;
+  color: var(--white); margin-bottom: 3rem; letter-spacing: 0.05em;
+  line-height: 1;
+}
+.mob-logo span { color: var(--cream); }
+#mobileMenu nav { display: flex; flex-direction: column; gap: 1.5rem; }
+#mobileMenu nav a {
+  font-family: var(--font-display); font-size: 2.5rem;
+  color: rgba(255,255,255,0.5); letter-spacing: 0.05em;
+  transition: color var(--transition);
+}
+#mobileMenu nav a:hover { color: var(--cream); }
+.mob-footer {
+  position: absolute; bottom: 5%; left: 5%; right: 5%;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.mob-footer p { font-size: 0.72rem; color: rgba(255,255,255,0.3); letter-spacing: 0.12em; }
+
+
+/* ════════════════════════════════════════════════════════
+   HERO
+   ════════════════════════════════════════════════════════ */
+#hero {
+  min-height: 100vh;
+  background: var(--ink);
+  display: grid; grid-template-columns: 1fr 1fr;
+  position: relative; overflow: hidden;
+}
+
+/* Textura de grain no hero */
+#hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.4; pointer-events: none; z-index: 1;
+}
+
+.hero-left {
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  padding: 0 8% 10%;
+  position: relative; z-index: 2;
+}
+.hero-eyebrow {
+  font-size: 0.68rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--cream);
+  margin-bottom: 1.8rem;
+  display: flex; align-items: center; gap: 1rem;
+}
+.hero-eyebrow::before {
+  content: ''; width: 40px; height: 1px; background: var(--cream);
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 8vw, 8rem);
+  line-height: 0.92; letter-spacing: 0.02em;
+  color: var(--white); margin-bottom: 2rem;
+}
+.hero-title .accent { color: var(--cream); }
+.hero-title .italic-serif {
+  font-family: var(--font-serif);
+  font-style: italic; font-size: 0.7em;
+  color: var(--cream-lt); display: block;
+  letter-spacing: 0;
+}
+.hero-desc {
+  font-size: 0.88rem; font-weight: 300;
+  color: rgba(255,255,255,0.55);
+  max-width: 340px; line-height: 1.85;
+  margin-bottom: 2.8rem;
+}
+.hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: 0.7rem;
+  padding: 14px 32px; background: var(--cream); color: var(--ink);
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-weight: 500; border: none; cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-hero-primary:hover { background: var(--white); transform: translateY(-2px); }
+.btn-hero-outline {
+  display: inline-flex; align-items: center; gap: 0.7rem;
+  padding: 14px 32px; background: transparent; color: var(--white);
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-weight: 500; border: 1px solid rgba(255,255,255,0.3); cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-hero-outline:hover { border-color: var(--cream); color: var(--cream); }
+
+.hero-right {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column;
+}
+
+/* Div que mostra foto de evento (editável pelo admin) */
+.hero-img-area {
+  flex: 1;
+  background: var(--ink2);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-img-area img {
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: 0.7;
+}
+.hero-img-placeholder {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1rem;
+  color: rgba(255,255,255,0.2);
+}
+.hero-img-placeholder svg { width: 48px; height: 48px; }
+.hero-img-placeholder p {
+  font-size: 0.76rem; letter-spacing: 0.15em; text-transform: uppercase;
+}
+
+/* Barra de stats no canto inferior direito do hero */
+.hero-stats {
+  display: flex; border-top: 1px solid rgba(255,255,255,0.08);
+}
+.hero-stat {
+  flex: 1; padding: 20px 28px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.hero-stat:last-child { border-right: none; }
+.hero-stat-num {
+  font-family: var(--font-display);
+  font-size: 2.2rem; color: var(--cream); line-height: 1;
+}
+.hero-stat-label {
+  font-size: 0.65rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4);
+  margin-top: 4px;
+}
+
+/* Scroll indicator */
+.hero-scroll {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  z-index: 3;
+  animation: bounce 2.2s ease-in-out infinite;
+}
+.hero-scroll span {
+  font-size: 0.6rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: rgba(255,255,255,0.3);
+}
+.hero-scroll-arrow {
+  width: 1px; height: 42px;
+  background: linear-gradient(to bottom, var(--cream), transparent);
+}
+@keyframes bounce { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(8px)} }
+
+
+/* ════════════════════════════════════════════════════════
+   SEÇÕES — Estilos comuns
+   ════════════════════════════════════════════════════════ */
+section { padding: 110px 5%; }
+.section-label {
+  display: flex; align-items: center; gap: 1rem;
+  font-size: 0.68rem; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--cream);
+  margin-bottom: 1.4rem;
+}
+.section-label::before {
+  content: ''; width: 36px; height: 1px; background: var(--cream);
+}
+.section-h {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 5vw, 5rem);
+  line-height: 0.92; letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.section-h .serif-em {
+  font-family: var(--font-serif);
+  font-style: italic; font-size: 0.8em;
+  color: var(--gray);
+}
+.section-sub {
+  font-size: 0.86rem; color: var(--gray);
+  font-weight: 300; line-height: 1.85; max-width: 500px;
+  margin-top: 1rem;
+}
+
+/* Botão padrão */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  padding: 13px 30px; background: var(--ink); color: var(--white);
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-weight: 500; border: none; cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-primary:hover { background: var(--cream); color: var(--ink); }
+.btn-outline-dark {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  padding: 13px 30px; background: transparent; color: var(--ink);
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase;
+  font-weight: 500; border: 1.5px solid var(--ink); cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-outline-dark:hover { background: var(--ink); color: var(--white); }
+
+
+/* ════════════════════════════════════════════════════════
+   CATÁLOGO DE PRODUTOS / ITENS DE DECORAÇÃO
+   ════════════════════════════════════════════════════════ */
+#catalog { background: var(--offwhite); }
+.catalog-head {
+  display: flex; justify-content: space-between;
+  align-items: flex-end; gap: 2rem; margin-bottom: 52px;
+  flex-wrap: wrap;
+}
+.catalog-tabs {
+  display: flex; gap: 0; flex-wrap: wrap;
+  border-bottom: 1px solid var(--gray-lt); margin-top: 2rem;
+}
+.ctab {
+  padding: 10px 22px; font-size: 0.72rem;
+  letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500;
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; color: var(--gray); transition: all var(--transition);
+  margin-bottom: -1px; font-family: var(--font-body);
+}
+.ctab.active { color: var(--ink); border-bottom-color: var(--ink); }
+.ctab:hover:not(.active) { color: var(--ink); border-bottom-color: var(--cream); }
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 2px; /* editorial: gap mínimo, cria efeito de "bloco" */
+  margin-top: 40px;
+}
+.product-card {
+  background: var(--white);
+  position: relative; overflow: hidden; cursor: pointer;
+  transition: all var(--transition);
+}
+.product-card:hover { box-shadow: 0 32px 64px rgba(10,10,10,0.12); transform: translateY(-4px); }
+.product-img {
+  height: 280px; background: var(--cream-bg);
+  overflow: hidden; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.product-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease; }
+.product-card:hover .product-img img { transform: scale(1.06); }
+.product-img-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  color: var(--gray-lt); font-size: 0.76rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.product-img-placeholder svg { opacity: 0.3; width: 40px; height: 40px; }
+.product-cat-tag {
+  position: absolute; top: 14px; left: 14px;
+  padding: 4px 12px; background: var(--ink); color: var(--white);
+  font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+}
+.product-body { padding: 22px 24px; }
+.product-name {
+  font-family: var(--font-serif); font-size: 1.2rem; font-weight: 700;
+  margin-bottom: 0.4rem; line-height: 1.3;
+}
+.product-desc {
+  font-size: 0.82rem; color: var(--gray); line-height: 1.7;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.product-footer {
+  padding: 14px 24px; border-top: 1px solid var(--cream-bg);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.product-cta {
+  font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 500; color: var(--ink);
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; gap: 0.4rem;
+  transition: gap var(--transition);
+  font-family: var(--font-body);
+}
+.product-cta:hover { gap: 0.7rem; color: var(--cream); }
+.no-items {
+  grid-column: 1/-1; text-align: center; padding: 80px;
+  color: var(--gray-lt); font-family: var(--font-display);
+  font-size: 2rem; letter-spacing: 0.05em;
+}
+
+
+/* ════════════════════════════════════════════════════════
+   GALERIA DE EVENTOS
+   ════════════════════════════════════════════════════════ */
+#gallery { background: var(--ink); padding: 110px 0; }
+.gallery-head {
+  padding: 0 5%; margin-bottom: 60px;
+}
+.gallery-head .section-h { color: var(--white); }
+.gallery-head .section-sub { color: rgba(255,255,255,0.4); }
+.gallery-head .section-label { color: var(--cream); }
+
+/* Grid masonry estilo editorial */
+.events-masonry {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 220px;
+  gap: 3px;
+  padding: 0 5%;
+}
+.event-card {
+  position: relative; overflow: hidden; cursor: pointer;
+  background: var(--ink2);
+}
+.event-card.tall { grid-row: span 2; }
+.event-card.wide { grid-column: span 2; }
+.event-card img {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: transform 0.7s ease, opacity 0.4s;
+  opacity: 0.75;
+}
+.event-card:hover img { transform: scale(1.08); opacity: 0.9; }
+.event-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(10,10,10,0.85) 0%, transparent 50%);
+  opacity: 0; transition: opacity var(--transition);
+  display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 24px;
+}
+.event-card:hover .event-overlay { opacity: 1; }
+.event-title {
+  font-family: var(--font-display); font-size: 1.4rem;
+  color: var(--white); letter-spacing: 0.03em; line-height: 1;
+}
+.event-desc {
+  font-size: 0.76rem; color: rgba(255,255,255,0.6);
+  margin-top: 4px; line-height: 1.6;
+}
+/* Placeholder quando não tem foto */
+.event-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 0.5rem;
+  color: rgba(255,255,255,0.15);
+  font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.1em;
+}
+.event-placeholder svg { opacity: 0.15; }
+
+/* Botão ver mais */
+.gallery-more {
+  text-align: center; margin-top: 40px; padding: 0 5%;
+}
+
+/* ════════════════════════════════════════════════════════
+   SOBRE / DIFERENCIAIS
+   ════════════════════════════════════════════════════════ */
+#about {
+  background: var(--cream-bg);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  padding: 0;
+}
+.about-img {
+  min-height: 560px; background: var(--ink2); position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.about-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.about-img-text {
+  font-family: var(--font-display); font-size: 6rem;
+  color: rgba(255,255,255,0.07); letter-spacing: 0.05em;
+  text-align: center; line-height: 1; z-index: 1;
+  pointer-events: none; user-select: none;
+}
+.about-content {
+  padding: 80px 64px; display: flex;
+  flex-direction: column; justify-content: center;
+}
+.about-content .section-h { margin-bottom: 1.5rem; }
+.about-content p {
+  font-size: 0.9rem; color: var(--gray);
+  line-height: 1.9; margin-bottom: 1.2rem; font-weight: 300;
+}
+.diferenciais {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-top: 2.5rem;
+}
+.diferencial {
+  padding: 20px; background: var(--white);
+  border-left: 2px solid var(--cream);
+}
+.diferencial-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+.diferencial-title {
+  font-family: var(--font-serif); font-size: 0.95rem;
+  font-weight: 700; margin-bottom: 0.2rem;
+}
+.diferencial-text { font-size: 0.78rem; color: var(--gray); line-height: 1.6; }
+
+
+/* ════════════════════════════════════════════════════════
+   CONTATO
+   ════════════════════════════════════════════════════════ */
+#contact { background: var(--ink); }
+#contact .section-h { color: var(--white); }
+#contact .section-label { color: var(--cream); }
+#contact .section-label::before { background: var(--cream); }
+.contact-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 64px; margin-top: 52px;
+}
+.contact-info { display: flex; flex-direction: column; gap: 1.5rem; }
+.contact-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+}
+.contact-item-icon {
+  width: 40px; height: 40px; background: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 1rem; color: var(--ink);
+}
+.contact-item-body { }
+.contact-item-label {
+  font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--cream); margin-bottom: 3px;
+}
+.contact-item-text { font-size: 0.88rem; color: rgba(255,255,255,0.65); line-height: 1.6; }
+.contact-item-text a { color: inherit; transition: color var(--transition); }
+.contact-item-text a:hover { color: var(--cream); }
+
+.contact-cta-box {
+  border: 1px solid rgba(255,255,255,0.08); padding: 48px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.contact-cta-box h3 {
+  font-family: var(--font-serif); font-size: 1.8rem; font-style: italic;
+  color: var(--white); margin-bottom: 1rem; line-height: 1.3;
+}
+.contact-cta-box p {
+  font-size: 0.86rem; color: rgba(255,255,255,0.45);
+  line-height: 1.8; margin-bottom: 2rem; font-weight: 300;
+}
+.socials { display: flex; gap: 0.8rem; margin-top: 1.8rem; }
+.social-link {
+  width: 42px; height: 42px;
+  border: 1px solid rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.45); transition: all var(--transition);
+}
+.social-link:hover { border-color: var(--cream); color: var(--cream); }
+
+/* WA float */
+.wa-float {
+  position: fixed; bottom: 28px; right: 28px;
+  z-index: var(--z-whatsapp);
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #25d366;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 24px rgba(37,211,102,0.4);
+  transition: transform var(--transition);
+}
+.wa-float:hover { transform: scale(1.12); }
+
+
+/* ════════════════════════════════════════════════════════
+   FOOTER
+   ════════════════════════════════════════════════════════ */
+footer {
+  background: #050505; border-top: 1px solid rgba(255,255,255,0.04);
+  padding: 36px 5%;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+}
+.footer-logo {
+  font-family: var(--font-display); font-size: 1.3rem; color: rgba(255,255,255,0.2);
+  letter-spacing: 0.08em;
+}
+.footer-logo span { color: var(--cream); opacity: 0.6; }
+footer p {
+  font-size: 0.72rem; color: rgba(255,255,255,0.2);
+  letter-spacing: 0.08em;
+}
+.footer-admin-link {
+  font-size: 0.68rem; color: rgba(255,255,255,0.15);
+  letter-spacing: 0.12em; cursor: pointer; transition: color var(--transition);
+  background: none; border: none; font-family: var(--font-body);
+}
+.footer-admin-link:hover { color: var(--cream); }
+
+
+/* ════════════════════════════════════════════════════════
+   MODAL DETALHES (site público)
+   z-index: var(--z-modal-pub) = 1050
+   ════════════════════════════════════════════════════════ */
+.pub-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(10,10,10,0.85);
+  z-index: var(--z-modal-pub);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.pub-modal-overlay.open { display: flex; }
+.pub-modal {
+  background: var(--white); max-width: 600px; width: 100%;
+  max-height: 88vh; overflow-y: auto; position: relative;
+}
+.pub-modal-img {
+  height: 320px; background: var(--cream-bg); overflow: hidden;
+}
+.pub-modal-img img { width: 100%; height: 100%; object-fit: cover; }
+.pub-modal-body { padding: 36px; }
+.pub-modal-cat {
+  font-size: 0.64rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--cream); margin-bottom: 0.6rem;
+}
+.pub-modal-name {
+  font-family: var(--font-serif); font-size: 1.8rem; font-weight: 700;
+  margin-bottom: 1rem; line-height: 1.2;
+}
+.pub-modal-desc {
+  font-size: 0.88rem; color: var(--gray); line-height: 1.85; font-weight: 300;
+}
+.pub-modal-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 36px; height: 36px; background: var(--ink);
+  color: var(--white); border: none; cursor: pointer;
+  font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+}
+.pub-modal-close:hover { background: var(--cream); color: var(--ink); }
+.pub-modal-wa {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 13px 24px; background: #25d366; color: var(--white);
+  font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+  font-weight: 500; border: none; cursor: pointer;
+  margin-top: 1.8rem; transition: opacity var(--transition);
+  font-family: var(--font-body);
+}
+.pub-modal-wa:hover { opacity: 0.88; }
+
+
+/* ════════════════════════════════════════════════════════
+   FADE IN SCROLL
+   ════════════════════════════════════════════════════════ */
+.fade-up {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+
+
+/* ════════════════════════════════════════════════════════
+   ADMIN OVERLAY
+   z-index: var(--z-admin-over) = 2000
+   ════════════════════════════════════════════════════════ */
+#adminOverlay {
+  display: none; position: fixed; inset: 0;
+  background: var(--offwhite);
+  z-index: var(--z-admin-over); overflow: hidden;
+}
+#adminOverlay.open { display: block; }
+
+/* ── LOGIN ── */
+.a-login {
+  display: none; min-height: 100vh;
+  background: var(--ink);
+  align-items: center; justify-content: center;
+}
+.a-login.show { display: flex; }
+.a-login-box {
+  background: var(--offwhite); padding: 60px 52px;
+  max-width: 420px; width: 100%;
+}
+.a-login-logo {
+  font-family: var(--font-display); font-size: 2.2rem;
+  letter-spacing: 0.05em; margin-bottom: 0.3rem;
+}
+.a-login-logo span { color: var(--cream); }
+.a-login-sub {
+  font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gray); margin-bottom: 3rem;
+}
+.a-field { margin-bottom: 1.4rem; }
+.a-field label {
+  display: block; font-size: 0.68rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gray); margin-bottom: 6px;
+}
+.a-field input {
+  width: 100%; padding: 12px 16px;
+  border: 1.5px solid var(--cream-lt);
+  font-size: 0.9rem; outline: none;
+  transition: border-color var(--transition);
+  background: var(--white); color: var(--ink);
+}
+.a-field input:focus { border-color: var(--cream); }
+.a-login-err {
+  padding: 10px 14px; background: #fde8e8;
+  border-left: 3px solid #c0392b;
+  font-size: 0.8rem; color: #c0392b;
+  margin-bottom: 1rem; display: none;
+}
+.a-login-err.show { display: block; }
+.btn-a-login {
+  width: 100%; padding: 14px; background: var(--ink); color: var(--white);
+  font-size: 0.76rem; letter-spacing: 0.2em; text-transform: uppercase;
+  border: none; cursor: pointer; transition: background var(--transition);
+  font-family: var(--font-body);
+}
+.btn-a-login:hover { background: var(--cream); color: var(--ink); }
+.a-back {
+  display: block; text-align: center; margin-top: 1.2rem;
+  font-size: 0.74rem; color: var(--gray); cursor: pointer;
+  background: none; border: none; font-family: var(--font-body);
+  transition: color var(--transition);
+}
+.a-back:hover { color: var(--cream); }
+
+
+/* ── PAINEL ADMIN ── */
+.a-panel { display: none; min-height: 100vh; }
+.a-panel.show { display: flex; }
+
+.a-sidebar {
+  width: 230px; background: var(--ink); flex-shrink: 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.a-sidebar-logo {
+  padding: 28px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.a-sidebar-logo .logo-main {
+  font-family: var(--font-display); font-size: 1.4rem;
+  color: var(--white); letter-spacing: 0.05em;
+}
+.a-sidebar-logo .logo-main span { color: var(--cream); }
+.a-sidebar-logo .logo-sub {
+  font-size: 0.6rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.25);
+  text-transform: uppercase; margin-top: 2px;
+}
+.a-nav { flex: 1; padding: 20px 0; }
+.a-nav-btn {
+  display: flex; align-items: center; gap: 0.8rem;
+  padding: 13px 24px; width: 100%;
+  color: rgba(255,255,255,0.45); font-size: 0.76rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: none; border: none; border-left: 2px solid transparent;
+  cursor: pointer; text-align: left; font-family: var(--font-body);
+  transition: all var(--transition);
+}
+.a-nav-btn:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+.a-nav-btn.active {
+  color: var(--cream); border-left-color: var(--cream);
+  background: rgba(200,185,154,0.06);
+}
+.a-nav-icon { font-size: 1rem; flex-shrink: 0; }
+.a-logout {
+  margin: 20px 16px;
+  padding: 10px; border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.4); font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  background: none; cursor: pointer; font-family: var(--font-body);
+  transition: all var(--transition);
+}
+.a-logout:hover { border-color: rgba(255,255,255,0.3); color: var(--white); }
+
+.a-content { flex: 1; padding: 40px; overflow-y: auto; max-height: 100vh; }
+.a-page { display: none; }
+.a-page.active { display: block; }
+.a-page-top {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 32px;
+  padding-bottom: 20px; border-bottom: 1.5px solid var(--cream-lt);
+}
+.a-page-top h1 {
+  font-family: var(--font-display); font-size: 2.2rem;
+  letter-spacing: 0.03em;
+}
+.btn-a-add {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 10px 22px; background: var(--ink); color: var(--white);
+  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+  border: none; cursor: pointer; transition: background var(--transition);
+  font-family: var(--font-body);
+}
+.btn-a-add:hover { background: var(--cream); color: var(--ink); }
+
+
+/* ── DASHBOARD STATS ── */
+.dash-stats {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 2px; margin-bottom: 40px;
+}
+.dash-stat {
+  background: var(--white); padding: 24px 20px;
+  border-bottom: 2px solid var(--cream);
+}
+.dash-stat-icon { font-size: 1.5rem; margin-bottom: 8px; }
+.dash-stat-num {
+  font-family: var(--font-display); font-size: 2.4rem; line-height: 1;
+}
+.dash-stat-label {
+  font-size: 0.66rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--gray); margin-top: 4px;
+}
+.dash-recent h3 {
+  font-family: var(--font-serif); font-size: 1.3rem; font-style: italic;
+  margin-bottom: 16px; color: var(--gray);
+}
+
+
+/* ── TABELA ADMIN ── */
+.a-table-wrap { background: var(--white); overflow-x: auto; }
+.a-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.a-table thead tr { border-bottom: 2px solid var(--cream-lt); }
+.a-table th {
+  padding: 12px 16px; text-align: left;
+  font-size: 0.66rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--gray); font-weight: 500;
+}
+.a-table td {
+  padding: 14px 16px; font-size: 0.84rem;
+  border-bottom: 1px solid var(--cream-bg); vertical-align: middle;
+}
+.a-table tr:last-child td { border-bottom: none; }
+.a-table tr:hover td { background: var(--cream-bg); }
+.a-thumb {
+  width: 56px; height: 48px; object-fit: cover;
+  border: 1px solid var(--cream-lt);
+}
+.a-thumb-ph {
+  width: 56px; height: 48px; background: var(--cream-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.55rem; color: var(--gray-lt); letter-spacing: 0.08em;
+}
+.a-action-btns { display: flex; gap: 6px; }
+.btn-ed, .btn-dl {
+  padding: 6px 14px; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  border: none; cursor: pointer; transition: all var(--transition);
+  font-family: var(--font-body);
+}
+.btn-ed { background: var(--cream-bg); color: var(--ink); }
+.btn-ed:hover { background: var(--cream); }
+.btn-dl { background: #fde8e8; color: #c0392b; }
+.btn-dl:hover { background: #c0392b; color: var(--white); }
+.a-table-empty {
+  text-align: center; padding: 52px;
+  color: var(--gray-lt); font-family: var(--font-display);
+  font-size: 1.6rem; letter-spacing: 0.06em;
+}
+.a-badge {
+  display: inline-block; padding: 3px 10px;
+  font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--cream-bg); color: var(--gray);
+}
+
+
+/* ════════════════════════════════════════════════════════
+   MODAL FORMULÁRIO ADMIN
+   
+   🚨 z-index: var(--z-admin-modal) = 2100
+      DEVE ser maior que o admin-overlay (2000)
+      Se o modal não aparecer, verifique este z-index!
+   ════════════════════════════════════════════════════════ */
+.a-modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(10,10,10,0.8);
+  z-index: var(--z-admin-modal); /* ← CRÍTICO */
+  align-items: center; justify-content: center; padding: 20px;
+}
+.a-modal-overlay.open { display: flex; }
+
+.a-modal-card {
+  background: var(--white); width: 100%; max-width: 640px;
+  max-height: 92vh; overflow-y: auto;
+  box-shadow: 0 40px 100px rgba(10,10,10,0.4);
+}
+.a-modal-head {
+  padding: 28px 36px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--cream-lt);
+  position: sticky; top: 0; background: var(--white); z-index: 1;
+}
+.a-modal-head h2 {
+  font-family: var(--font-display); font-size: 1.6rem; letter-spacing: 0.03em;
+}
+.a-modal-x {
+  width: 36px; height: 36px; background: var(--ink); color: var(--white);
+  border: none; cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+}
+.a-modal-x:hover { background: var(--cream); color: var(--ink); }
+
+.a-modal-body { padding: 36px; }
+
+/* ── GRID INTERNO DO FORMULÁRIO ──
+   🚨 BUG HISTÓRICO CORRIGIDO: .form-grid dentro do modal
+      não tinha display:grid aplicado no contexto do adminOverlay.
+      Agora usa .a-form-grid com !important como fallback
+   ──────────────────────────────── */
+.a-form-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px; margin-bottom: 18px;
+}
+.a-form-grid .a-full { grid-column: 1 / -1; }
+
+/* Campos do formulário */
+.a-field-group { display: flex; flex-direction: column; gap: 5px; }
+.a-field-group label {
+  font-size: 0.68rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gray); font-weight: 500;
+}
+/* 🚨 width: 100% é obrigatório — sem isso os inputs transbordam no grid */
+.a-field-group input,
+.a-field-group select,
+.a-field-group textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--cream-lt);
+  font-family: var(--font-body); font-size: 0.88rem;
+  outline: none; transition: border-color var(--transition);
+  background: var(--white); color: var(--ink);
+  appearance: none; -webkit-appearance: none;
+}
+.a-field-group input:focus,
+.a-field-group select:focus,
+.a-field-group textarea:focus { border-color: var(--cream); }
+.a-field-group textarea { resize: vertical; min-height: 90px; }
+.a-field-note { font-size: 0.7rem; color: var(--cream); margin-top: 3px; }
+.a-field-err { font-size: 0.7rem; color: #c0392b; margin-top: 3px; display: none; }
+.a-field-err.show { display: block; }
+
+/* Upload de imagem */
+.a-img-area {
+  border: 2px dashed var(--cream-lt); cursor: pointer;
+  transition: border-color var(--transition); overflow: hidden;
+}
+.a-img-area:hover { border-color: var(--cream); }
+.a-img-preview {
+  width: 100%; height: 200px; background: var(--cream-bg);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  position: relative;
+}
+.a-img-preview img { width: 100%; height: 100%; object-fit: cover; }
+.a-img-preview-ph {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  color: var(--gray-lt); font-size: 0.76rem; letter-spacing: 0.1em;
+  text-transform: uppercase; text-align: center;
+}
+.a-img-preview-ph svg { width: 36px; height: 36px; opacity: 0.4; }
+.a-img-label {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  padding: 10px; text-align: center;
+  font-size: 0.7rem; color: var(--gray);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--cream-bg); border-top: 1px solid var(--cream-lt);
+}
+#prod-img-file, #evt-img-file { display: none; }
+
+/* Botão salvar do form */
+.btn-a-save {
+  width: 100%; padding: 14px; background: var(--ink); color: var(--white);
+  font-size: 0.76rem; letter-spacing: 0.2em; text-transform: uppercase;
+  border: none; cursor: pointer; margin-top: 10px;
+  transition: background var(--transition); font-family: var(--font-body);
+}
+.btn-a-save:hover { background: var(--cream); color: var(--ink); }
+
+
+/* ── CONFIGURAÇÕES ── */
+.a-settings-form { max-width: 520px; }
+.a-sf { margin-bottom: 1.4rem; }
+.a-sf label {
+  display: block; font-size: 0.68rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gray); margin-bottom: 6px;
+}
+.a-sf input {
+  width: 100%; padding: 12px 16px;
+  border: 1.5px solid var(--cream-lt);
+  font-family: var(--font-body); font-size: 0.9rem;
+  outline: none; transition: border-color var(--transition);
+  background: var(--white); color: var(--ink);
+}
+.a-sf input:focus { border-color: var(--cream); }
+.a-sf-divider { height: 1px; background: var(--cream-lt); margin: 28px 0; }
+.btn-a-settings {
+  padding: 12px 32px; background: var(--ink); color: var(--white);
+  font-size: 0.74rem; letter-spacing: 0.18em; text-transform: uppercase;
+  border: none; cursor: pointer; transition: background var(--transition);
+  font-family: var(--font-body);
+}
+.btn-a-settings:hover { background: var(--cream); color: var(--ink); }
+
+
+/* ── TOAST ──
+   z-index: var(--z-toast) = 2200
+   ⚠️ Se não aparece: verifique se #toast existe no HTML
+   ── */
+#toast {
+  position: fixed; bottom: 32px; left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  padding: 14px 28px; font-size: 0.82rem; letter-spacing: 0.06em;
+  z-index: var(--z-toast); transition: transform 0.4s ease;
+  white-space: nowrap; pointer-events: none; color: var(--white);
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.ok  { background: var(--ink); border-bottom: 2px solid var(--cream); }
+#toast.err { background: #c0392b; }
+
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVO
+   ════════════════════════════════════════════════════════ */
+@media (max-width: 960px) {
+  #hero { grid-template-columns: 1fr; }
+  .hero-right { order: -1; height: 340px; }
+  .hero-left { padding: 5% 6% 10%; }
+  .hero-stats { display: none; }
+
+  #about { grid-template-columns: 1fr; }
+  .about-img { min-height: 300px; }
+  .about-content { padding: 52px 6%; }
+
+  .contact-grid { grid-template-columns: 1fr; }
+  .events-masonry { grid-template-columns: repeat(2, 1fr); }
+  .event-card.wide { grid-column: span 1; }
+  .event-card.tall { grid-row: span 1; }
+
+  .nav-links, .nav-cta { display: none; }
+  .hamburger { display: flex; }
+
+  .a-form-grid { grid-template-columns: 1fr; }
+  .a-sidebar { width: 200px; }
+}
+@media (max-width: 650px) {
+  section { padding: 72px 5%; }
+  .events-masonry { grid-template-columns: 1fr; padding: 0 5%; }
+  .products-grid { grid-template-columns: 1fr; }
+  .diferenciais { grid-template-columns: 1fr; }
+  .dash-stats { grid-template-columns: 1fr 1fr; }
+  .a-panel { flex-direction: column; }
+  .a-sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; }
+  .a-sidebar-logo { display: none; }
+  .a-nav { display: flex; padding: 6px; }
+  .a-nav-btn { padding: 10px 12px; font-size: 0.62rem; flex-direction: column; gap: 2px; border-left: none; border-bottom: 2px solid transparent; }
+  .a-nav-btn.active { border-left: none; border-bottom-color: var(--cream); }
+  .a-logout { margin: 6px; }
+  .a-content { max-height: none; padding: 24px 16px; }
+  .contact-cta-box { padding: 28px 24px; }
+  footer { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════ WHATSAPP FLOAT ════════ -->
+<a href="https://wa.me/5542999999999" target="_blank" class="wa-float" aria-label="WhatsApp" id="waFloat">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
+
+<!-- ════════ NAVBAR ════════ -->
+<nav id="navbar">
+  <div class="nav-logo-wrap">
+    <div class="nav-logo-main"><span>DE</span>LLUXE</div>
+    <div class="nav-logo-sub">Locações</div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#catalog">Catálogo</a></li>
+    <li><a href="#gallery">Eventos</a></li>
+    <li><a href="#about">Sobre</a></li>
+    <li><a href="#contact">Contato</a></li>
+  </ul>
+  <a href="#contact" class="nav-cta">Solicitar Orçamento</a>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ════════ MENU MOBILE ════════ -->
+<div id="mobileMenu">
+  <div class="mob-logo"><span>DE</span>LLUXE</div>
+  <nav>
+    <a href="#catalog" onclick="toggleMenu()">Catálogo</a>
+    <a href="#gallery" onclick="toggleMenu()">Eventos</a>
+    <a href="#about" onclick="toggleMenu()">Sobre</a>
+    <a href="#contact" onclick="toggleMenu()">Contato</a>
+  </nav>
+  <div class="mob-footer">
+    <p id="mob-wa-text">(42) 9 9999-9999</p>
+    <p>DELLUXE © 2024</p>
+  </div>
+</div>
+
+<!-- ════════ HERO ════════ -->
+<section id="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Decoração & Locação de Móveis</div>
+    <h1 class="hero-title">
+      <span class="italic-serif">Transformamos</span>
+      ESPAÇOS EM <span class="accent">MEMÓRIAS</span>
+    </h1>
+    <p class="hero-desc">
+      Mobiliário sofisticado e decoração personalizada para tornar cada evento único e inesquecível.
+    </p>
+    <div class="hero-actions">
+      <a href="#catalog" class="btn-hero-primary">Ver Catálogo</a>
+      <a href="#contact" class="btn-hero-outline">Solicitar Orçamento</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-img-area" id="heroImgArea">
+      <div class="hero-img-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <p>Foto do evento</p>
+      </div>
+    </div>
+    <div class="hero-stats" id="heroStats">
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="statEventos">0+</div>
+        <div class="hero-stat-label">Eventos</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num" id="statItens">0+</div>
+        <div class="hero-stat-label">Itens</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">5★</div>
+        <div class="hero-stat-label">Avaliação</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <div class="hero-scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ════════ CATÁLOGO ════════ -->
+<section id="catalog">
+  <div class="catalog-head">
+    <div>
+      <div class="section-label fade-up">Portfólio</div>
+      <h2 class="section-h fade-up">NOSSO <span class="serif-em">Catálogo</span></h2>
+      <p class="section-sub fade-up">Móveis, arranjos e itens de decoração disponíveis para locação. Cada peça selecionada com cuidado para compor o cenário perfeito.</p>
+    </div>
+  </div>
+  <!-- Tabs de categoria -->
+  <div class="catalog-tabs" id="catalogTabs"></div>
+  <!-- Grid de produtos -->
+  <div class="products-grid" id="productsGrid"></div>
+</section>
+
+<!-- ════════ GALERIA DE EVENTOS ════════ -->
+<section id="gallery">
+  <div class="gallery-head">
+    <div class="section-label fade-up">Portfólio</div>
+    <h2 class="section-h fade-up">EVENTOS <span class="serif-em">Realizados</span></h2>
+    <p class="section-sub fade-up">Veja como transformamos ambientes e criamos experiências únicas para nossos clientes.</p>
+  </div>
+  <div class="events-masonry" id="eventsGrid"></div>
+  <div class="gallery-more">
+    <a href="#contact" class="btn-outline-dark" style="color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.2)">
+      Solicitar portfólio completo
+    </a>
+  </div>
+</section>
+
+<!-- ════════ SOBRE ════════ -->
+<section id="about" style="padding:0">
+  <div class="about-img">
+    <div class="about-img-text">DELLUXE</div>
+  </div>
+  <div class="about-content">
+    <div class="section-label">Sobre Nós</div>
+    <h2 class="section-h">EXCELÊNCIA <span class="serif-em">em cada detalhe</span></h2>
+    <p>A DELLUXE Locações nasceu da paixão por transformar espaços comuns em cenários extraordinários. Com um acervo cuidadosamente selecionado, oferecemos mobiliário e decoração de alto padrão para eventos de todos os tamanhos.</p>
+    <p>Da concepção à montagem, cuidamos de cada detalhe para que você possa desfrutar do seu evento sem preocupações.</p>
+    <div class="diferenciais">
+      <div class="diferencial">
+        <div class="diferencial-icon">✦</div>
+        <div class="diferencial-title">Acervo Exclusivo</div>
+        <div class="diferencial-text">Peças únicas e sofisticadas selecionadas para compor cenários impecáveis.</div>
+      </div>
+      <div class="diferencial">
+        <div class="diferencial-icon">✦</div>
+        <div class="diferencial-title">Montagem Inclusa</div>
+        <div class="diferencial-text">Nossa equipe cuida de toda a montagem e desmontagem do evento.</div>
+      </div>
+      <div class="diferencial">
+        <div class="diferencial-icon">✦</div>
+        <div class="diferencial-title">Personalização</div>
+        <div class="diferencial-text">Adaptamos o estilo e a paleta de cores conforme seu projeto.</div>
+      </div>
+      <div class="diferencial">
+        <div class="diferencial-icon">✦</div>
+        <div class="diferencial-title">Pontualidade</div>
+        <div class="diferencial-text">Entrega e retirada dentro do prazo combinado, sem surpresas.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ CONTATO ════════ -->
+<section id="contact">
+  <div class="section-label fade-up">Fale Conosco</div>
+  <h2 class="section-h fade-up" style="color:var(--white)">VAMOS <span class="serif-em">conversar?</span></h2>
+  <div class="contact-grid">
+    <div class="contact-info fade-up">
+      <div class="contact-item">
+        <div class="contact-item-icon">📍</div>
+        <div class="contact-item-body">
+          <div class="contact-item-label">Endereço</div>
+          <div class="contact-item-text" id="contactAddr">Jaguariaíva – PR</div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-icon">📱</div>
+        <div class="contact-item-body">
+          <div class="contact-item-label">WhatsApp</div>
+          <div class="contact-item-text"><a href="#" id="contactWaLink">(42) 9 9999-9999</a></div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-icon">📸</div>
+        <div class="contact-item-body">
+          <div class="contact-item-label">Instagram</div>
+          <div class="contact-item-text"><a href="#" id="contactIgLink" target="_blank">@delluxelocacoes</a></div>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="contact-item-icon">🕐</div>
+        <div class="contact-item-body">
+          <div class="contact-item-label">Horário</div>
+          <div class="contact-item-text">Seg – Sex: 8h às 18h<br>Sáb: 8h às 13h</div>
+        </div>
+      </div>
+      <div class="socials">
+        <a href="#" id="socialIg" class="social-link" target="_blank" aria-label="Instagram">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </a>
+        <a href="#" id="socialWa" class="social-link" target="_blank" aria-label="WhatsApp">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+        <a href="#" id="socialFb" class="social-link" target="_blank" aria-label="Facebook">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="contact-cta-box fade-up">
+      <h3>"Seu evento merece o melhor cenário."</h3>
+      <p>Entre em contato pelo WhatsApp e receba uma proposta personalizada. Atendemos casamentos, formaturas, corporativos, aniversários e muito mais.</p>
+      <a href="#" id="ctaWaBtn" target="_blank" class="btn-hero-primary" style="width:fit-content">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Solicitar Orçamento
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ FOOTER ════════ -->
+<footer>
+  <div class="footer-logo"><span>DE</span>LLUXE Locações</div>
+  <p>© 2024 DELLUXE Locações. Todos os direitos reservados.</p>
+  <button class="footer-admin-link" onclick="openAdmin()">Acesso Admin</button>
+</footer>
+
+<!-- ════════ MODAL DETALHE PRODUTO (público) ════════ -->
+<div class="pub-modal-overlay" id="prodModal">
+  <div class="pub-modal">
+    <button class="pub-modal-close" onclick="closeProdModal()">✕</button>
+    <div class="pub-modal-img" id="prodModalImg">
+      <div style="width:100%;height:100%;background:var(--cream-bg);display:flex;align-items:center;justify-content:center;color:var(--gray-lt)">Sem imagem</div>
+    </div>
+    <div class="pub-modal-body">
+      <div class="pub-modal-cat" id="prodModalCat"></div>
+      <div class="pub-modal-name" id="prodModalName"></div>
+      <div class="pub-modal-desc" id="prodModalDesc"></div>
+      <button class="pub-modal-wa" id="prodModalWa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Solicitar informações via WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     ADMIN OVERLAY
+     z-index: 2000 — cobre tudo
+════════════════════════════════════════════════════════ -->
+<div id="adminOverlay">
+
+  <!-- LOGIN -->
+  <div class="a-login show" id="aLogin">
+    <div class="a-login-box">
+      <div class="a-login-logo"><span>DE</span>LLUXE</div>
+      <div class="a-login-sub">Painel Administrativo</div>
+      <div class="a-login-err" id="aLoginErr">Usuário ou senha incorretos.</div>
+      <div class="a-field">
+        <label>Usuário</label>
+        <input type="text" id="loginUser" placeholder="admin" autocomplete="username"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div class="a-field">
+        <label>Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <button class="btn-a-login" onclick="doLogin()">Entrar</button>
+      <button class="a-back" onclick="closeAdmin()">← Voltar ao site</button>
+    </div>
+  </div>
+
+  <!-- PAINEL -->
+  <div class="a-panel" id="aPanel">
+
+    <!-- Sidebar -->
+    <aside class="a-sidebar">
+      <div class="a-sidebar-logo">
+        <div class="logo-main"><span>DE</span>LLUXE</div>
+        <div class="logo-sub">Admin</div>
+      </div>
+      <nav class="a-nav">
+        <button class="a-nav-btn active" id="nav-dash"   onclick="showPage('dash')">
+          <span class="a-nav-icon">📊</span> Dashboard
+        </button>
+        <button class="a-nav-btn" id="nav-products" onclick="showPage('products')">
+          <span class="a-nav-icon">🪑</span> Catálogo
+        </button>
+        <button class="a-nav-btn" id="nav-events" onclick="showPage('events')">
+          <span class="a-nav-icon">🎪</span> Eventos
+        </button>
+        <button class="a-nav-btn" id="nav-cats" onclick="showPage('cats')">
+          <span class="a-nav-icon">🏷️</span> Categorias
+        </button>
+        <button class="a-nav-btn" id="nav-settings" onclick="showPage('settings')">
+          <span class="a-nav-icon">⚙️</span> Config.
+        </button>
+      </nav>
+      <button class="a-logout" onclick="doLogout()">Sair</button>
+    </aside>
+
+    <!-- Conteúdo -->
+    <div class="a-content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="a-page active" id="page-dash">
+        <div class="a-page-top">
+          <h1>Dashboard</h1>
+        </div>
+        <div class="dash-stats" id="dashStats"></div>
+        <div class="dash-recent">
+          <h3>Últimos itens cadastrados</h3>
+          <div class="a-table-wrap">
+            <table class="a-table" id="dashRecentTable">
+              <thead><tr><th>Img</th><th>Nome</th><th>Categoria</th><th>Tipo</th></tr></thead>
+              <tbody id="dashRecentBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CATÁLOGO / PRODUTOS ── -->
+      <div class="a-page" id="page-products">
+        <div class="a-page-top">
+          <h1>Catálogo de Itens</h1>
+          <!-- 🚨 BUG CORRIGIDO: botão antes usava onclick inline que
+               às vezes perdia o contexto. Agora usa ID explícito. -->
+          <button class="btn-a-add" id="btnAddProd">+ Adicionar Item</button>
+        </div>
+        <div class="a-table-wrap">
+          <table class="a-table">
+            <thead>
+              <tr>
+                <th>Img</th><th>Nome</th><th>Categoria</th><th>Descrição</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="prodTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── EVENTOS ── -->
+      <div class="a-page" id="page-events">
+        <div class="a-page-top">
+          <h1>Eventos Realizados</h1>
+          <button class="btn-a-add" id="btnAddEvt">+ Adicionar Evento</button>
+        </div>
+        <div class="a-table-wrap">
+          <table class="a-table">
+            <thead>
+              <tr>
+                <th>Foto</th><th>Título</th><th>Descrição</th><th>Destaque</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="evtTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── CATEGORIAS ── -->
+      <div class="a-page" id="page-cats">
+        <div class="a-page-top">
+          <h1>Categorias</h1>
+          <button class="btn-a-add" id="btnAddCat">+ Nova Categoria</button>
+        </div>
+        <p style="font-size:.84rem;color:var(--gray);margin-bottom:24px">
+          As categorias organizam o catálogo de itens. Remover uma categoria não exclui os itens já cadastrados nela.
+        </p>
+        <div class="a-table-wrap">
+          <table class="a-table">
+            <thead><tr><th>Nome</th><th>Itens</th><th>Ações</th></tr></thead>
+            <tbody id="catsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── CONFIGURAÇÕES ── -->
+      <div class="a-page" id="page-settings">
+        <div class="a-page-top"><h1>Configurações</h1></div>
+        <div class="a-settings-form">
+          <div class="a-sf">
+            <label>Nome da Empresa</label>
+            <input type="text" id="cfg-name" placeholder="DELLUXE Locações">
+          </div>
+          <div class="a-sf">
+            <label>WhatsApp (somente números)</label>
+            <input type="text" id="cfg-wa" placeholder="5542999999999">
+          </div>
+          <div class="a-sf">
+            <label>Endereço / Cidade</label>
+            <input type="text" id="cfg-addr" placeholder="Jaguariaíva – PR">
+          </div>
+          <div class="a-sf">
+            <label>Instagram (URL completa)</label>
+            <input type="text" id="cfg-ig" placeholder="https://instagram.com/delluxe">
+          </div>
+          <div class="a-sf">
+            <label>Facebook (URL completa)</label>
+            <input type="text" id="cfg-fb" placeholder="https://facebook.com/delluxe">
+          </div>
+          <div class="a-sf-divider"></div>
+          <div class="a-sf">
+            <label>Novo Usuário Admin</label>
+            <input type="text" id="cfg-user" placeholder="admin">
+          </div>
+          <div class="a-sf">
+            <label>Nova Senha Admin</label>
+            <input type="password" id="cfg-pass" placeholder="deixe em branco para não alterar">
+          </div>
+          <button class="btn-a-settings" onclick="saveSettings()">Salvar Configurações</button>
+          <p id="cfg-msg" style="font-size:.78rem;color:var(--cream);margin-top:10px;display:none">✓ Configurações salvas!</p>
+        </div>
+      </div>
+
+    </div><!-- /a-content -->
+  </div><!-- /a-panel -->
+</div><!-- /adminOverlay -->
+
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL PRODUTO (admin)
+     
+     🚨 FORA DO #adminOverlay — isso é intencional e crítico!
+        Se estiver dentro, o z-index não funciona corretamente
+        e o modal fica escondido atrás do overlay.
+     
+     z-index: 2100 (var --z-admin-modal)
+════════════════════════════════════════════════════════ -->
+<div class="a-modal-overlay" id="prodFormModal">
+  <div class="a-modal-card">
+    <div class="a-modal-head">
+      <h2 id="prodFormTitle">Adicionar Item</h2>
+      <button class="a-modal-x" onclick="closeProdForm()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <!-- ⚠️ ID oculto do item em edição (null = novo) -->
+      <input type="hidden" id="pf-id">
+
+      <div class="a-form-grid">
+        <div class="a-field-group a-full">
+          <label>Nome do Item *</label>
+          <input type="text" id="pf-name" placeholder="Ex: Sofá Chesterfield Bege">
+          <span class="a-field-err" id="pf-name-err">Campo obrigatório</span>
+        </div>
+        <div class="a-field-group">
+          <label>Categoria *</label>
+          <!-- ⚠️ Populado dinamicamente via renderProdCatSelect() -->
+          <select id="pf-cat"></select>
+        </div>
+        <div class="a-field-group">
+          <label>Disponibilidade</label>
+          <select id="pf-avail">
+            <option value="disponivel">Disponível</option>
+            <option value="consultar">Consultar</option>
+            <option value="indisponivel">Indisponível</option>
+          </select>
+        </div>
+        <div class="a-field-group a-full">
+          <label>Descrição</label>
+          <textarea id="pf-desc" placeholder="Descreva o item, dimensões, material, quantidade disponível..."></textarea>
+        </div>
+        <div class="a-field-group a-full">
+          <label>Foto do Item</label>
+          <!-- 🚨 BUG CORRIGIDO: a área de clique agora usa label + for
+               em vez de onclick no div, que às vezes não disparava -->
+          <label for="prod-img-file" class="a-img-area" id="prodImgArea" style="cursor:pointer">
+            <div class="a-img-preview" id="prodImgPreview">
+              <div class="a-img-preview-ph">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Clique para selecionar imagem
+              </div>
+            </div>
+            <div class="a-img-label">📁 JPG, PNG ou WEBP — será comprimida automaticamente</div>
+          </label>
+          <input type="file" id="prod-img-file" accept="image/jpeg,image/png,image/webp" onchange="handleProdImg(event)">
+          <span class="a-field-note">A imagem é comprimida para máx. 900px automaticamente.</span>
+        </div>
+      </div>
+
+      <button class="btn-a-save" onclick="saveProd()">Salvar Item no Catálogo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     MODAL EVENTO (admin)
+     🚨 Também FORA do #adminOverlay — mesmo motivo acima
+     z-index: 2100
+════════════════════════════════════════════════════════ -->
+<div class="a-modal-overlay" id="evtFormModal">
+  <div class="a-modal-card">
+    <div class="a-modal-head">
+      <h2 id="evtFormTitle">Adicionar Evento</h2>
+      <button class="a-modal-x" onclick="closeEvtForm()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <input type="hidden" id="ef-id">
+
+      <div class="a-form-grid">
+        <div class="a-field-group a-full">
+          <label>Título do Evento *</label>
+          <input type="text" id="ef-title" placeholder="Ex: Casamento Silva & Souza">
+          <span class="a-field-err" id="ef-title-err">Campo obrigatório</span>
+        </div>
+        <div class="a-field-group a-full">
+          <label>Descrição (opcional)</label>
+          <textarea id="ef-desc" placeholder="Breve descrição do evento, local, tema..."></textarea>
+        </div>
+        <div class="a-field-group">
+          <label>Exibição na Galeria</label>
+          <select id="ef-size">
+            <option value="normal">Normal</option>
+            <option value="tall">Alto (ocupa 2 linhas)</option>
+            <option value="wide">Largo (ocupa 2 colunas)</option>
+          </select>
+        </div>
+        <div class="a-field-group a-full">
+          <label>Foto do Evento *</label>
+          <label for="evt-img-file" class="a-img-area" style="cursor:pointer">
+            <div class="a-img-preview" id="evtImgPreview">
+              <div class="a-img-preview-ph">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                Clique para selecionar imagem
+              </div>
+            </div>
+            <div class="a-img-label">📁 JPG, PNG ou WEBP — será comprimida automaticamente</div>
+          </label>
+          <input type="file" id="evt-img-file" accept="image/jpeg,image/png,image/webp" onchange="handleEvtImg(event)">
+          <span class="a-field-err" id="ef-img-err">Adicione uma foto para o evento</span>
+        </div>
+      </div>
+
+      <button class="btn-a-save" onclick="saveEvt()">Salvar Evento na Galeria</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORIA -->
+<div class="a-modal-overlay" id="catFormModal">
+  <div class="a-modal-card" style="max-width:420px">
+    <div class="a-modal-head">
+      <h2>Nova Categoria</h2>
+      <button class="a-modal-x" onclick="closeCatForm()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <div class="a-field-group" style="margin-bottom:1.2rem">
+        <label>Nome da Categoria *</label>
+        <input type="text" id="cat-name-input" placeholder="Ex: Cadeiras, Mesas, Arranjos...">
+        <span class="a-field-err" id="cat-name-err">Campo obrigatório</span>
+      </div>
+      <button class="btn-a-save" onclick="saveCat()">Criar Categoria</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST DE NOTIFICAÇÃO -->
+<div id="toast"></div>
+
+
+<!-- ════════════════════════════════════════════════════════
+     JAVASCRIPT PRINCIPAL
+     
+     ⚠️  ORDEM DE FUNÇÕES:
+         1. Store (dados)
+         2. Utils (helpers)
+         3. Site público
+         4. Admin — autenticação
+         5. Admin — navegação
+         6. Admin — CRUD produtos
+         7. Admin — CRUD eventos
+         8. Admin — CRUD categorias
+         9. Admin — configurações
+         10. Init
+════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════════════════
+   1. STORE — localStorage centralizado
+   ⚠️ Se dados somem: verifique o nome das chaves abaixo
+   ════════════════════════════════════════════════════════ */
+const Store = {
+  KEYS: {
+    products:  'delluxe_products',
+    events:    'delluxe_events',
+    categories:'delluxe_categories',
+    settings:  'delluxe_settings',
+    auth:      'delluxe_auth'
+  },
+
+  // ── Categorias ──
+  DEFAULT_CATS: ['Sofás', 'Cadeiras', 'Mesas', 'Arranjos', 'Iluminação', 'Acessórios'],
+
+  getCats() {
+    try {
+      const raw = localStorage.getItem(this.KEYS.categories);
+      const arr = raw ? JSON.parse(raw) : null;
+      if (!arr || !arr.length) { this.setCats(this.DEFAULT_CATS); return [...this.DEFAULT_CATS]; }
+      return arr;
+    } catch(e) { console.error('Store.getCats:', e); return [...this.DEFAULT_CATS]; }
+  },
+  setCats(arr) {
+    try { localStorage.setItem(this.KEYS.categories, JSON.stringify(arr)); }
+    catch(e) { console.error('Store.setCats:', e); }
+  },
+
+  // ── Produtos / Itens ──
+  DEFAULT_PRODUCTS: [
+    { id:'p1', name:'Sofá Chesterfield Bege', cat:'Sofás', desc:'Sofá capitonê estilo inglês, revestimento em veludo bege. Ideal para lounges e áreas VIP.', img:'', avail:'disponivel' },
+    { id:'p2', name:'Cadeira Tiffany Dourada', cat:'Cadeiras', desc:'Cadeira clássica com estrutura dourada e assento estofado branco. Disponível em quantidade.', img:'', avail:'disponivel' },
+    { id:'p3', name:'Mesa Bistrô Marmoreada', cat:'Mesas', desc:'Mesa redonda com tampo em mármore e base dourada. Perfeita para cocktails e eventos íntimos.', img:'', avail:'consultar' },
+    { id:'p4', name:'Arranjo Floral Suspenso', cat:'Arranjos', desc:'Composição floral suspensa com flores naturais e folhagens. Personalização de cores disponível.', img:'', avail:'disponivel' },
+    { id:'p5', name:'Lustre de Cristal', cat:'Iluminação', desc:'Lustre vintage com pingentes de cristal. Cria atmosfera sofisticada em qualquer ambiente.', img:'', avail:'disponivel' },
+    { id:'p6', name:'Espelho Veneziano', cat:'Acessórios', desc:'Espelho com moldura veneziana dourada, 1,80m de altura. Elemento decorativo elegante.', img:'', avail:'disponivel' },
+  ],
+
+  getProducts() {
+    try {
+      const raw = localStorage.getItem(this.KEYS.products);
+      const arr = raw ? JSON.parse(raw) : null;
+      if (!arr) { this.setProducts(this.DEFAULT_PRODUCTS); return [...this.DEFAULT_PRODUCTS]; }
+      return arr;
+    } catch(e) { console.error('Store.getProducts:', e); return [...this.DEFAULT_PRODUCTS]; }
+  },
+  setProducts(arr) {
+    try { localStorage.setItem(this.KEYS.products, JSON.stringify(arr)); }
+    catch(e) {
+      // ⚠️ localStorage cheio (imagens grandes) — avisa o usuário
+      console.error('Store.setProducts:', e);
+      showToast('Armazenamento cheio! Reduza o tamanho das imagens.', 'err');
+    }
+  },
+
+  // ── Eventos ──
+  getEvents() {
+    try {
+      const raw = localStorage.getItem(this.KEYS.events);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e) { console.error('Store.getEvents:', e); return []; }
+  },
+  setEvents(arr) {
+    try { localStorage.setItem(this.KEYS.events, JSON.stringify(arr)); }
+    catch(e) { console.error('Store.setEvents:', e); showToast('Armazenamento cheio!', 'err'); }
+  },
+
+  // ── Configurações ──
+  DEFAULT_SETTINGS: {
+    name: 'DELLUXE Locações',
+    wa:   '5542999999999',
+    addr: 'Jaguariaíva – PR',
+    ig:   'https://instagram.com',
+    fb:   'https://facebook.com',
+    user: 'admin',
+    passHash: btoa('delluxe2024') // ⚠️ btoa = ofuscação básica, não produção real
+  },
+
+  getSettings() {
+    try {
+      const raw = localStorage.getItem(this.KEYS.settings);
+      const saved = raw ? JSON.parse(raw) : null;
+      return saved ? { ...this.DEFAULT_SETTINGS, ...saved } : { ...this.DEFAULT_SETTINGS };
+    } catch(e) { return { ...this.DEFAULT_SETTINGS }; }
+  },
+  setSettings(cfg) {
+    try { localStorage.setItem(this.KEYS.settings, JSON.stringify(cfg)); }
+    catch(e) { console.error('Store.setSettings:', e); }
+  }
+};
+
+
+/* ════════════════════════════════════════════════════════
+   2. UTILS — funções auxiliares
+   ════════════════════════════════════════════════════════ */
+
+/** Escapa HTML para prevenir XSS ao inserir dados no DOM */
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/** Gera ID único baseado em timestamp + random */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/** Toast de notificação — 'ok' ou 'err' */
+function showToast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type === 'err' ? 'err' : 'ok';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/**
+ * Comprime imagem via Canvas
+ * ⚠️ MAX_DIM = 900px — reduzir se localStorage lotar
+ * ⚠️ QUALITY = 0.78 — aumentar para mais qualidade (maior arquivo)
+ */
+function compressImage(file, callback) {
+  const MAX_DIM = 900;
+  const QUALITY = 0.78;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      let { width: w, height: h } = img;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+        else       { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', QUALITY));
+    };
+    img.onerror = () => showToast('Erro ao processar imagem.', 'err');
+    img.src = ev.target.result;
+  };
+  reader.onerror = () => showToast('Erro ao ler arquivo.', 'err');
+  reader.readAsDataURL(file);
+}
+
+/**
+ * Mostra preview de imagem dentro de um container
+ * ⚠️ previewEl deve ter a classe .a-img-preview
+ */
+function showImgPreview(previewEl, src) {
+  previewEl.innerHTML = src
+    ? `<img src="${src}" alt="preview">`
+    : `<div class="a-img-preview-ph">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36">
+           <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+           <polyline points="21 15 16 10 5 21"/>
+         </svg>
+         Clique para selecionar imagem
+       </div>`;
+}
+
+
+/* ════════════════════════════════════════════════════════
+   3. SITE PÚBLICO — renderização e interações
+   ════════════════════════════════════════════════════════ */
+
+// Categoria ativa no catálogo
+let activeCat = 'Todos';
+
+/** Aplica configurações do store na interface pública */
+function applySettings() {
+  const s = Store.getSettings();
+  const waUrl = `https://wa.me/${s.wa}`;
+  const waMsg = encodeURIComponent('Olá! Gostaria de solicitar um orçamento para meu evento.');
+
+  // WhatsApp float
+  const waFloat = document.getElementById('waFloat');
+  if (waFloat) waFloat.href = waUrl;
+
+  // Contato
+  const contactAddr = document.getElementById('contactAddr');
+  if (contactAddr) contactAddr.textContent = s.addr;
+
+  const contactWaLink = document.getElementById('contactWaLink');
+  if (contactWaLink) { contactWaLink.href = waUrl; contactWaLink.textContent = `+${s.wa}`; }
+
+  const contactIgLink = document.getElementById('contactIgLink');
+  if (contactIgLink) { contactIgLink.href = s.ig; contactIgLink.textContent = '@' + (s.ig.split('/').pop() || 'delluxelocacoes'); }
+
+  // Socials
+  const sIg = document.getElementById('socialIg');
+  if (sIg) sIg.href = s.ig;
+  const sWa = document.getElementById('socialWa');
+  if (sWa) sWa.href = `${waUrl}?text=${waMsg}`;
+  const sFb = document.getElementById('socialFb');
+  if (sFb) sFb.href = s.fb;
+
+  // Botão CTA
+  const ctaBtn = document.getElementById('ctaWaBtn');
+  if (ctaBtn) ctaBtn.href = `${waUrl}?text=${waMsg}`;
+
+  // Footer WA mobile
+  const mobWa = document.getElementById('mob-wa-text');
+  if (mobWa) mobWa.textContent = '+' + s.wa;
+}
+
+/** Atualiza stats do Hero */
+function updateHeroStats() {
+  const events = Store.getEvents();
+  const prods  = Store.getProducts();
+  const statE = document.getElementById('statEventos');
+  const statI = document.getElementById('statItens');
+  if (statE) statE.textContent = (events.length || 0) + '+';
+  if (statI) statI.textContent = (prods.length  || 0) + '+';
+
+  // Foto de capa = primeiro evento com imagem
+  const heroArea = document.getElementById('heroImgArea');
+  if (heroArea) {
+    const cover = events.find(e => e.img);
+    if (cover) {
+      heroArea.innerHTML = `<img src="${cover.img}" alt="${esc(cover.title)}" style="width:100%;height:100%;object-fit:cover;opacity:.7">`;
+    }
+  }
+}
+
+/** Renderiza tabs do catálogo */
+function renderCatalogTabs() {
+  const container = document.getElementById('catalogTabs');
+  if (!container) return;
+  const cats = ['Todos', ...Store.getCats()];
+  container.innerHTML = cats.map(c =>
+    `<button class="ctab${c === activeCat ? ' active' : ''}"
+       onclick="switchCat(this,'${esc(c)}')">${esc(c)}</button>`
+  ).join('');
+}
+
+/** Troca categoria ativa */
+function switchCat(btn, cat) {
+  document.querySelectorAll('.ctab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCat = cat;
+  renderProducts();
+}
+
+/** Renderiza grid de produtos */
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  if (!grid) return;
+  const all  = Store.getProducts();
+  const list = activeCat === 'Todos' ? all : all.filter(p => p.cat === activeCat);
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="no-items">Nenhum item nesta categoria</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(p => `
+    <div class="product-card" onclick="openProdModal('${p.id}')">
+      <div class="product-img">
+        ${p.img
+          ? `<img src="${p.img}" alt="${esc(p.name)}" loading="lazy">`
+          : `<div class="product-img-placeholder">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                 <rect x="3" y="3" width="18" height="18" rx="2"/>
+                 <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+               </svg>Sem foto
+             </div>`
+        }
+        <div class="product-cat-tag">${esc(p.cat)}</div>
+      </div>
+      <div class="product-body">
+        <div class="product-name">${esc(p.name)}</div>
+        <div class="product-desc">${esc(p.desc || '')}</div>
+      </div>
+      <div class="product-footer">
+        <button class="product-cta">Ver detalhes →</button>
+        <span style="font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:${p.avail==='disponivel'?'#27ae60':p.avail==='consultar'?'#e67e22':'#c0392b'}">
+          ${p.avail === 'disponivel' ? '● Disponível' : p.avail === 'consultar' ? '● Consultar' : '● Indisponível'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+
+  // Re-observe fade-up
+  grid.querySelectorAll('.product-card').forEach(el => {
+    el.classList.add('fade-up');
+    fadeObs.observe(el);
+  });
+}
+
+// IntersectionObserver global para fade-up
+const fadeObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+
+/** Renderiza galeria de eventos */
+function renderEvents() {
+  const grid = document.getElementById('eventsGrid');
+  if (!grid) return;
+  const events = Store.getEvents();
+
+  if (!events.length) {
+    grid.innerHTML = `
+      <div class="event-placeholder" style="grid-column:1/-1;height:300px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="60" height="60">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+        </svg>
+        EVENTOS SERÃO EXIBIDOS AQUI
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = events.map(ev => `
+    <div class="event-card${ev.size === 'tall' ? ' tall' : ev.size === 'wide' ? ' wide' : ''}">
+      ${ev.img
+        ? `<img src="${ev.img}" alt="${esc(ev.title)}" loading="lazy">`
+        : `<div class="event-placeholder">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" width="48" height="48">
+               <rect x="3" y="3" width="18" height="18" rx="2"/>
+               <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+             </svg>SEM FOTO
+           </div>`
+      }
+      <div class="event-overlay">
+        <div class="event-title">${esc(ev.title)}</div>
+        ${ev.desc ? `<div class="event-desc">${esc(ev.desc)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+/** Abre modal de detalhe de produto */
+function openProdModal(id) {
+  const p = Store.getProducts().find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('prodModalCat').textContent  = p.cat;
+  document.getElementById('prodModalName').textContent = p.name;
+  document.getElementById('prodModalDesc').textContent = p.desc || 'Entre em contato para mais informações.';
+
+  const imgEl = document.getElementById('prodModalImg');
+  imgEl.innerHTML = p.img
+    ? `<img src="${p.img}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover">`
+    : `<div style="width:100%;height:100%;background:var(--cream-bg);display:flex;align-items:center;justify-content:center;color:var(--gray-lt)">Sem imagem</div>`;
+
+  const s = Store.getSettings();
+  const msg = encodeURIComponent(`Olá! Tenho interesse no item: *${p.name}*. Podem me passar mais informações?`);
+  document.getElementById('prodModalWa').onclick = () => window.open(`https://wa.me/${s.wa}?text=${msg}`, '_blank');
+
+  document.getElementById('prodModal').classList.add('open');
+}
+
+function closeProdModal() {
+  document.getElementById('prodModal').classList.remove('open');
+}
+
+/** Navbar scroll */
+function initNavbar() {
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar')?.classList.toggle('scrolled', scrollY > 80);
+  });
+}
+
+/** Menu mobile */
+function toggleMenu() {
+  const menu = document.getElementById('mobileMenu');
+  const btn  = document.getElementById('hamburger');
+  menu?.classList.toggle('open');
+  btn?.classList.toggle('open');
+}
+
+/** Scroll fade-up */
+function initFadeObs() {
+  document.querySelectorAll('.fade-up').forEach(el => fadeObs.observe(el));
+}
+
+/** Fecha modal público ao clicar no overlay */
+document.getElementById('prodModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeProdModal();
+});
+
+
+/* ════════════════════════════════════════════════════════
+   4. ADMIN — Autenticação
+   ════════════════════════════════════════════════════════ */
+
+function openAdmin() {
+  document.getElementById('adminOverlay').classList.add('open');
+  document.getElementById('aLogin').classList.add('show');
+  document.getElementById('aPanel').classList.remove('show');
+  // Limpa a senha
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('aLoginErr').classList.remove('show');
+  // Foca no campo usuário
+  setTimeout(() => document.getElementById('loginUser')?.focus(), 100);
+}
+
+function closeAdmin() {
+  document.getElementById('adminOverlay').classList.remove('open');
+}
+
+function doLogin() {
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err  = document.getElementById('aLoginErr');
+  const s    = Store.getSettings();
+
+  if (user === s.user && btoa(pass) === s.passHash) {
+    err.classList.remove('show');
+    document.getElementById('aLogin').classList.remove('show');
+    document.getElementById('aPanel').classList.add('show');
+    renderDashboard();
+    renderAdminProducts();
+    renderAdminEvents();
+    renderAdminCats();
+    loadSettingsForm();
+    showPage('dash');
+    console.log('✅ Admin logado com sucesso');
+  } else {
+    err.classList.add('show');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+}
+
+function doLogout() {
+  document.getElementById('aPanel').classList.remove('show');
+  document.getElementById('aLogin').classList.add('show');
+  document.getElementById('loginPass').value = '';
+  console.log('Admin deslogado');
+}
+
+
+/* ════════════════════════════════════════════════════════
+   5. ADMIN — Navegação entre páginas
+   ════════════════════════════════════════════════════════ */
+function showPage(name) {
+  document.querySelectorAll('.a-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.a-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name)?.classList.add('active');
+  document.getElementById('nav-' + name)?.classList.add('active');
+}
+
+
+/* ════════════════════════════════════════════════════════
+   6. ADMIN — Dashboard
+   ════════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const prods  = Store.getProducts();
+  const events = Store.getEvents();
+  const cats   = Store.getCats();
+
+  document.getElementById('dashStats').innerHTML = `
+    <div class="dash-stat">
+      <div class="dash-stat-icon">🪑</div>
+      <div class="dash-stat-num">${prods.length}</div>
+      <div class="dash-stat-label">Itens no Catálogo</div>
+    </div>
+    <div class="dash-stat">
+      <div class="dash-stat-icon">🎪</div>
+      <div class="dash-stat-num">${events.length}</div>
+      <div class="dash-stat-label">Eventos Registrados</div>
+    </div>
+    <div class="dash-stat">
+      <div class="dash-stat-icon">🏷️</div>
+      <div class="dash-stat-num">${cats.length}</div>
+      <div class="dash-stat-label">Categorias</div>
+    </div>
+    <div class="dash-stat">
+      <div class="dash-stat-icon">✅</div>
+      <div class="dash-stat-num">${prods.filter(p=>p.avail==='disponivel').length}</div>
+      <div class="dash-stat-label">Disponíveis</div>
+    </div>
+  `;
+
+  // Recentes (últimos 6 entre produtos e eventos mesclados)
+  const all = [
+    ...prods.map(p  => ({ img: p.img,  name: p.name,    cat: p.cat,   tipo: 'Item' })),
+    ...events.map(e => ({ img: e.img,  name: e.title,   cat: '—',     tipo: 'Evento' }))
+  ].slice(-6).reverse();
+
+  document.getElementById('dashRecentBody').innerHTML = all.length
+    ? all.map(r => `
+        <tr>
+          <td>${r.img
+            ? `<img class="a-thumb" src="${r.img}" alt="">`
+            : `<div class="a-thumb-ph">sem img</div>`}</td>
+          <td><strong>${esc(r.name)}</strong></td>
+          <td><span class="a-badge">${esc(r.cat)}</span></td>
+          <td><span class="a-badge">${r.tipo}</span></td>
+        </tr>`).join('')
+    : `<tr><td colspan="4" class="a-table-empty">Nenhum item ainda</td></tr>`;
+}
+
+
+/* ════════════════════════════════════════════════════════
+   7. ADMIN — CRUD Produtos/Itens do Catálogo
+   ════════════════════════════════════════════════════════ */
+
+let prodImgData = '';  // Armazena base64 da imagem temporariamente
+let editingProdId = null; // null = novo, string = editando
+
+/** Renderiza a tabela de produtos no admin */
+function renderAdminProducts() {
+  const prods = Store.getProducts();
+  const body  = document.getElementById('prodTableBody');
+  if (!body) return;
+
+  body.innerHTML = prods.length
+    ? prods.map(p => `
+        <tr>
+          <td>${p.img
+            ? `<img class="a-thumb" src="${p.img}" alt="">`
+            : `<div class="a-thumb-ph">sem<br>foto</div>`}</td>
+          <td><strong>${esc(p.name)}</strong></td>
+          <td><span class="a-badge">${esc(p.cat)}</span></td>
+          <td style="max-width:220px;color:var(--gray);font-size:.8rem">
+            ${esc((p.desc||'').slice(0, 60))}${p.desc&&p.desc.length>60?'…':''}
+          </td>
+          <td>
+            <div class="a-action-btns">
+              <button class="btn-ed" onclick="openProdForm('${p.id}')">Editar</button>
+              <button class="btn-dl" onclick="deleteProd('${p.id}')">Excluir</button>
+            </div>
+          </td>
+        </tr>`).join('')
+    : `<tr><td colspan="5" class="a-table-empty">Nenhum item cadastrado</td></tr>`;
+}
+
+/** Popula o select de categorias no formulário de produto */
+function renderProdCatSelect() {
+  const sel = document.getElementById('pf-cat');
+  if (!sel) return;
+  const cats = Store.getCats();
+  sel.innerHTML = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+/**
+ * Abre o formulário de produto
+ * ⚠️ id = null → novo item
+ * ⚠️ id = string → editar item existente
+ */
+function openProdForm(id = null) {
+  editingProdId = id;
+  prodImgData   = '';
+
+  // 🚨 BUG CORRIGIDO: campo de arquivo precisa ser limpo explicitamente
+  //    Sem isso, ao abrir "novo" depois de editar, o arquivo antigo persistia
+  const fileInput = document.getElementById('prod-img-file');
+  if (fileInput) fileInput.value = '';
+
+  renderProdCatSelect(); // Atualiza categorias no select
+
+  document.getElementById('prodFormTitle').textContent = id ? 'Editar Item' : 'Adicionar Item';
+
+  if (id) {
+    // Preenchendo formulário para edição
+    const p = Store.getProducts().find(x => x.id === id);
+    if (!p) { showToast('Item não encontrado!', 'err'); return; }
+
+    document.getElementById('pf-name').value  = p.name  || '';
+    document.getElementById('pf-desc').value  = p.desc  || '';
+    document.getElementById('pf-avail').value = p.avail || 'disponivel';
+    prodImgData = p.img || '';
+
+    // ⚠️ Select de categoria: precisa aguardar o render
+    const catSel = document.getElementById('pf-cat');
+    if (catSel) catSel.value = p.cat || '';
+
+    showImgPreview(document.getElementById('prodImgPreview'), p.img);
+  } else {
+    // Limpando para novo item
+    // 🚨 BUG CORRIGIDO: antes usava forEach(['pf-name','pf-desc'],id=>...)
+    //    mas 'id' sobrescrevia o parâmetro externo 'id'. Renomeado para 'fid'.
+    ['pf-name', 'pf-desc'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.value = '';
+    });
+    document.getElementById('pf-avail').value = 'disponivel';
+    showImgPreview(document.getElementById('prodImgPreview'), '');
+  }
+
+  // Remove erros anteriores
+  document.querySelectorAll('#prodFormModal .a-field-err').forEach(e => e.classList.remove('show'));
+
+  document.getElementById('prodFormModal').classList.add('open');
+}
+
+function closeProdForm() {
+  document.getElementById('prodFormModal').classList.remove('open');
+  prodImgData   = '';
+  editingProdId = null;
+}
+
+/** Processa o upload de imagem do produto */
+function handleProdImg(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, data => {
+    prodImgData = data;
+    showImgPreview(document.getElementById('prodImgPreview'), data);
+  });
+}
+
+/** Salva produto (novo ou editado) */
+function saveProd() {
+  const name  = document.getElementById('pf-name').value.trim();
+  const cat   = document.getElementById('pf-cat').value;
+  const avail = document.getElementById('pf-avail').value;
+  const desc  = document.getElementById('pf-desc').value.trim();
+
+  // Validação
+  let ok = true;
+  if (!name) {
+    document.getElementById('pf-name-err').classList.add('show');
+    ok = false;
+  } else {
+    document.getElementById('pf-name-err').classList.remove('show');
+  }
+  if (!ok) { showToast('Preencha os campos obrigatórios.', 'err'); return; }
+
+  const prods = Store.getProducts();
+
+  if (editingProdId) {
+    // ── EDITAR ──
+    const idx = prods.findIndex(p => p.id === editingProdId);
+    if (idx === -1) { showToast('Item não encontrado!', 'err'); return; }
+    prods[idx] = {
+      ...prods[idx], name, cat, avail, desc,
+      // Se nova imagem foi selecionada, usa ela; senão mantém a antiga
+      img: prodImgData || prods[idx].img
+    };
+  } else {
+    // ── NOVO ──
+    prods.push({ id: uid(), name, cat, avail, desc, img: prodImgData });
+  }
+
+  Store.setProducts(prods);
+  closeProdForm();
+  renderAdminProducts();
+  renderDashboard();
+  // Atualiza o site público também
+  renderProducts();
+  renderCatalogTabs();
+  updateHeroStats();
+  showToast(editingProdId ? '✓ Item atualizado!' : '✓ Item adicionado!');
+}
+
+/** Exclui produto */
+function deleteProd(id) {
+  if (!confirm('Excluir este item do catálogo? Esta ação não pode ser desfeita.')) return;
+  const prods = Store.getProducts().filter(p => p.id !== id);
+  Store.setProducts(prods);
+  renderAdminProducts();
+  renderDashboard();
+  renderProducts();
+  updateHeroStats();
+  showToast('Item excluído.');
+}
+
+
+/* ════════════════════════════════════════════════════════
+   8. ADMIN — CRUD Eventos
+   ════════════════════════════════════════════════════════ */
+
+let evtImgData   = '';
+let editingEvtId = null;
+
+function renderAdminEvents() {
+  const events = Store.getEvents();
+  const body   = document.getElementById('evtTableBody');
+  if (!body) return;
+
+  body.innerHTML = events.length
+    ? events.map(ev => `
+        <tr>
+          <td>${ev.img
+            ? `<img class="a-thumb" src="${ev.img}" alt="">`
+            : `<div class="a-thumb-ph">sem<br>foto</div>`}</td>
+          <td><strong>${esc(ev.title)}</strong></td>
+          <td style="max-width:200px;color:var(--gray);font-size:.8rem">
+            ${esc((ev.desc||'').slice(0,60))}${ev.desc&&ev.desc.length>60?'…':''}
+          </td>
+          <td><span class="a-badge">${ev.size||'normal'}</span></td>
+          <td>
+            <div class="a-action-btns">
+              <button class="btn-ed" onclick="openEvtForm('${ev.id}')">Editar</button>
+              <button class="btn-dl" onclick="deleteEvt('${ev.id}')">Excluir</button>
+            </div>
+          </td>
+        </tr>`).join('')
+    : `<tr><td colspan="5" class="a-table-empty">Nenhum evento cadastrado</td></tr>`;
+}
+
+function openEvtForm(id = null) {
+  editingEvtId = id;
+  evtImgData   = '';
+
+  const fileInput = document.getElementById('evt-img-file');
+  if (fileInput) fileInput.value = '';
+
+  document.getElementById('evtFormTitle').textContent = id ? 'Editar Evento' : 'Adicionar Evento';
+  document.querySelectorAll('#evtFormModal .a-field-err').forEach(e => e.classList.remove('show'));
+
+  if (id) {
+    const ev = Store.getEvents().find(x => x.id === id);
+    if (!ev) { showToast('Evento não encontrado!', 'err'); return; }
+    document.getElementById('ef-title').value = ev.title || '';
+    document.getElementById('ef-desc').value  = ev.desc  || '';
+    document.getElementById('ef-size').value  = ev.size  || 'normal';
+    evtImgData = ev.img || '';
+    showImgPreview(document.getElementById('evtImgPreview'), ev.img);
+  } else {
+    ['ef-title','ef-desc'].forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.value = '';
+    });
+    document.getElementById('ef-size').value = 'normal';
+    showImgPreview(document.getElementById('evtImgPreview'), '');
+  }
+
+  document.getElementById('evtFormModal').classList.add('open');
+}
+
+function closeEvtForm() {
+  document.getElementById('evtFormModal').classList.remove('open');
+  evtImgData   = '';
+  editingEvtId = null;
+}
+
+function handleEvtImg(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, data => {
+    evtImgData = data;
+    showImgPreview(document.getElementById('evtImgPreview'), data);
+  });
+}
+
+function saveEvt() {
+  const title = document.getElementById('ef-title').value.trim();
+  const desc  = document.getElementById('ef-desc').value.trim();
+  const size  = document.getElementById('ef-size').value;
+
+  let ok = true;
+  if (!title) { document.getElementById('ef-title-err').classList.add('show'); ok = false; }
+  else          document.getElementById('ef-title-err').classList.remove('show');
+
+  // ⚠️ Foto obrigatória apenas em novos eventos
+  if (!editingEvtId && !evtImgData) {
+    document.getElementById('ef-img-err').classList.add('show'); ok = false;
+  } else {
+    document.getElementById('ef-img-err').classList.remove('show');
+  }
+
+  if (!ok) { showToast('Preencha os campos obrigatórios.', 'err'); return; }
+
+  const events = Store.getEvents();
+
+  if (editingEvtId) {
+    const idx = events.findIndex(e => e.id === editingEvtId);
+    if (idx === -1) { showToast('Evento não encontrado!', 'err'); return; }
+    events[idx] = { ...events[idx], title, desc, size, img: evtImgData || events[idx].img };
+  } else {
+    events.push({ id: uid(), title, desc, size, img: evtImgData });
+  }
+
+  Store.setEvents(events);
+  closeEvtForm();
+  renderAdminEvents();
+  renderDashboard();
+  renderEvents();
+  updateHeroStats();
+  showToast(editingEvtId ? '✓ Evento atualizado!' : '✓ Evento adicionado!');
+}
+
+function deleteEvt(id) {
+  if (!confirm('Excluir este evento da galeria?')) return;
+  Store.setEvents(Store.getEvents().filter(e => e.id !== id));
+  renderAdminEvents();
+  renderDashboard();
+  renderEvents();
+  updateHeroStats();
+  showToast('Evento excluído.');
+}
+
+
+/* ════════════════════════════════════════════════════════
+   9. ADMIN — CRUD Categorias
+   ════════════════════════════════════════════════════════ */
+
+function renderAdminCats() {
+  const cats  = Store.getCats();
+  const prods = Store.getProducts();
+  const body  = document.getElementById('catsTableBody');
+  if (!body) return;
+
+  body.innerHTML = cats.length
+    ? cats.map(c => {
+        const count = prods.filter(p => p.cat === c).length;
+        return `
+          <tr>
+            <td><strong>${esc(c)}</strong></td>
+            <td>${count} ${count===1?'item':'itens'}</td>
+            <td>
+              <button class="btn-dl" onclick="deleteCat('${esc(c)}')">Remover</button>
+            </td>
+          </tr>`;
+      }).join('')
+    : `<tr><td colspan="3" class="a-table-empty">Nenhuma categoria</td></tr>`;
+}
+
+function openCatForm() { document.getElementById('catFormModal').classList.add('open'); document.getElementById('cat-name-input').value = ''; }
+function closeCatForm() { document.getElementById('catFormModal').classList.remove('open'); }
+
+function saveCat() {
+  const name = document.getElementById('cat-name-input').value.trim();
+  if (!name) { document.getElementById('cat-name-err').classList.add('show'); return; }
+  document.getElementById('cat-name-err').classList.remove('show');
+
+  const cats = Store.getCats();
+  if (cats.includes(name)) { showToast('Categoria já existe!', 'err'); return; }
+  cats.push(name);
+  Store.setCats(cats);
+  closeCatForm();
+  renderAdminCats();
+  renderCatalogTabs();
+  showToast('✓ Categoria criada!');
+}
+
+function deleteCat(name) {
+  const prods = Store.getProducts().filter(p => p.cat === name);
+  const msg = prods.length
+    ? `Remover a categoria "${name}"? Os ${prods.length} item(ns) dessa categoria permanecerão, mas sem categoria.`
+    : `Remover a categoria "${name}"?`;
+  if (!confirm(msg)) return;
+  const cats = Store.getCats().filter(c => c !== name);
+  Store.setCats(cats);
+  renderAdminCats();
+  renderCatalogTabs();
+  showToast(`Categoria "${name}" removida.`);
+}
+
+
+/* ════════════════════════════════════════════════════════
+   10. ADMIN — Configurações
+   ════════════════════════════════════════════════════════ */
+
+function loadSettingsForm() {
+  const s = Store.getSettings();
+  document.getElementById('cfg-name').value = s.name || '';
+  document.getElementById('cfg-wa').value   = s.wa   || '';
+  document.getElementById('cfg-addr').value = s.addr || '';
+  document.getElementById('cfg-ig').value   = s.ig   || '';
+  document.getElementById('cfg-fb').value   = s.fb   || '';
+  document.getElementById('cfg-user').value = s.user || 'admin';
+  document.getElementById('cfg-pass').value = '';
+}
+
+function saveSettings() {
+  const s = Store.getSettings();
+  s.name = document.getElementById('cfg-name').value.trim() || s.name;
+  s.wa   = document.getElementById('cfg-wa').value.trim().replace(/\D/g,'') || s.wa;
+  s.addr = document.getElementById('cfg-addr').value.trim() || s.addr;
+  s.ig   = document.getElementById('cfg-ig').value.trim() || s.ig;
+  s.fb   = document.getElementById('cfg-fb').value.trim() || s.fb;
+
+  const newUser = document.getElementById('cfg-user').value.trim();
+  if (newUser) s.user = newUser;
+
+  const newPass = document.getElementById('cfg-pass').value;
+  if (newPass) s.passHash = btoa(newPass);
+
+  Store.setSettings(s);
+  document.getElementById('cfg-msg').style.display = 'block';
+  setTimeout(() => document.getElementById('cfg-msg').style.display = 'none', 3000);
+
+  // Atualiza interface pública com novas configurações
+  applySettings();
+  showToast('✓ Configurações salvas!');
+}
+
+
+/* ════════════════════════════════════════════════════════
+   11. BOTÕES COM ID — bindings seguros
+   ⚠️ Usar getElementById é mais seguro que onclick inline
+      para evitar problemas de escopo
+   ════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Botões de adicionar na navegação admin
+  document.getElementById('btnAddProd')?.addEventListener('click', () => openProdForm());
+  document.getElementById('btnAddEvt')?.addEventListener('click',  () => openEvtForm());
+  document.getElementById('btnAddCat')?.addEventListener('click',  () => openCatForm());
+
+  // Fechar modais ao clicar no overlay
+  // 🚨 BUG CORRIGIDO: antes fechava QUALQUER modal-overlay ao clicar
+  //    inclusive o do admin que estava aberto, causando conflito.
+  //    Agora cada overlay tem seu listener específico.
+  document.getElementById('prodFormModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeProdForm();
+  });
+  document.getElementById('evtFormModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeEvtForm();
+  });
+  document.getElementById('catFormModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeCatForm();
+  });
+
+  // ESC fecha o admin overlay
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeProdForm();
+      closeEvtForm();
+      closeCatForm();
+      closeProdModal();
+    }
+  });
+});
+
+
+/* ════════════════════════════════════════════════════════
+   12. INICIALIZAÇÃO
+   ════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('🖤 DELLUXE Locações — iniciando...');
+
+  initNavbar();
+  initFadeObs();
+  applySettings();
+  renderCatalogTabs();
+  renderProducts();
+  renderEvents();
+  updateHeroStats();
+
+  console.log('✅ DELLUXE Locações — pronto!');
+  console.log('🔐 Admin: usuário "admin" / senha "delluxe2024"');
+  console.log('💾 Dados em: localStorage (delluxe_products, delluxe_events, delluxe_settings)');
+});
+</script>
+</body>
+</html>
